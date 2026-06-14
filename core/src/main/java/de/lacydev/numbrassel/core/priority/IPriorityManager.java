@@ -1,6 +1,8 @@
 package de.lacydev.numbrassel.core.priority;
 
 import org.bukkit.entity.Player;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Interface für das Prioritätssystem des Numbrassel-Servers.
@@ -9,7 +11,16 @@ import org.bukkit.entity.Player;
 public interface IPriorityManager {
 
     /**
-     * Gibt die Priorität eines Spielers zurück.
+     * Gibt die Priorität eines Spielers basierend auf seiner UUID zurück.
+     * Höhere Werte = höhere Priorität.
+     *
+     * @param uuid Die UUID des Spielers
+     * @return Optional mit der Priorität, oder empty wenn nicht gefunden
+     */
+    Optional<Integer> getPriority(UUID uuid);
+
+    /**
+     * Gibt die Priorität eines Spielers (Legacy-Methode) zurück.
      * Höhere Werte = höhere Priorität.
      *
      * @param player Der Spieler
@@ -52,4 +63,11 @@ public interface IPriorityManager {
      * @return Die maximale Prioritätsstufe
      */
     int getMaxPriority();
+
+    /**
+     * Gibt die Standard-Priorität für neue Spieler zurück.
+     *
+     * @return Die Standard-Priorität
+     */
+    int getDefaultPriority();
 }
