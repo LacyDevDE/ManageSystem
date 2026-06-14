@@ -1,0 +1,37 @@
+name: PermissionSystem
+version: 1.0.0
+main: de.lacydev.numbrassel.permission.PermissionSystemPlugin
+description: Prioritäts- und Permissions-System für Numbrassel
+authors: [LacyDev]
+load: POSTWORLD
+depend: [NumbrasselCore]
+
+commands:
+  priority:
+    description: Verwalte Spieler-Prioritäten
+    usage: /priority <get|set> <player> [level]
+    permission: numbrassel.priority.manage
+  permission:
+    description: Verwalte Spieler-Permissions
+    usage: /permission <set|remove> <player> <permission>
+    permission: numbrassel.permission.manage
+
+permissions:
+  numbrassel.priority.player:
+    description: Standard Spieler Priorität
+    default: true
+  numbrassel.priority.moderator:
+    description: Moderator Priorität
+    default: false
+  numbrassel.priority.admin:
+    description: Admin Priorität
+    default: false
+  numbrassel.priority.owner:
+    description: Owner Priorität
+    default: false
+  numbrassel.priority.manage:
+    description: Verwalte Prioritäten
+    default: op
+  numbrassel.permission.manage:
+    description: Verwalte Permissions
+    default: op

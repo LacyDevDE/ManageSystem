@@ -1,0 +1,17 @@
+name: NumbrasselCore
+version: 1.0.0
+main: de.lacydev.numbrassel.core.NumbrasselCore
+description: Core-Modul für das modulare Numbrassel Server System
+authors: [LacyDev]
+load: STARTUP
+
+commands:
+  modulestatus:
+    description: Zeige ModuleRegistry Status
+    usage: /modulestatus
+    permission: numbrassel.core.status
+
+permissions:
+  numbrassel.core.status:
+    description: Zeige ModuleRegistry Status
+    default: op
