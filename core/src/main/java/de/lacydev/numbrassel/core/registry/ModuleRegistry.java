@@ -11,12 +11,15 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Zentrale Registrierungsstelle für alle Module des Numbrassel-Systems.
  * Diese Klasse verwaltet die Lebensdauer und Abhängigkeiten aller Module.
+ * 
+ * Thread-Sicherheit: ConcurrentHashMap für sichere Multi-Thread-Operationen
  */
 public class ModuleRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(ModuleRegistry.class);
     private final JavaPlugin parentPlugin;
     private final Map<String, RegisteredModule> modules = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> loadedModules = new ConcurrentHashMap<>();
     private final Set<String> requiredModules = new HashSet<>();
 
     // Definierte erforderliche Module für den Betrieb
@@ -54,8 +57,41 @@ public class ModuleRegistry {
         );
 
         modules.put(moduleId, registeredModule);
+        loadedModules.put(moduleId, true);
         logger.info("✓ Modul " + moduleId + " erfolgreich registriert (Priorität: " + priority + ")");
         return true;
+    }
+
+    /**
+     * Registriert ein Modul mit einfacher String-ID.
+     * VEREINFACHTE VERSION für schnelle Registrierung.
+     *
+     * @param name Die eindeutige ID des Moduls
+     * @return true wenn erfolgreich, false wenn bereits registriert
+     */
+    public synchronized boolean registerModule(String name) {
+        logger.debug("Schnell-Registrierung von Modul: " + name);
+
+        if (loadedModules.containsKey(name)) {
+            logger.warn("Modul " + name + " ist bereits geladen!");
+            return false;
+        }
+
+        loadedModules.put(name, true);
+        logger.info("✓ Modul " + name + " schnell-registriert.");
+        return true;
+    }
+
+    /**
+     * Prüft, ob ein Modul geladen ist.
+     * Diese Methode ist thread-sicher und liefert sofort eine Antwort.
+     *
+     * @param name Die ID des Moduls
+     * @return true wenn geladen, false wenn nicht gefunden
+     */
+    public boolean isModuleLoaded(String name) {
+        Boolean loaded = loadedModules.get(name);
+        return loaded != null && loaded;
     }
 
     /**
@@ -74,6 +110,7 @@ public class ModuleRegistry {
         }
 
         modules.remove(moduleId);
+        loadedModules.put(moduleId, false);
         logger.info("✓ Modul " + moduleId + " erfolgreich deregistriert.");
         return true;
     }
@@ -92,7 +129,7 @@ public class ModuleRegistry {
         List<String> presentModules = new ArrayList<>();
 
         for (String moduleId : requiredModuleIds) {
-            if (modules.containsKey(moduleId)) {
+            if (isModuleLoaded(moduleId)) {
                 presentModules.add(moduleId);
                 logger.debug("✓ Modul " + moduleId + " gefunden.");
             } else {
@@ -111,12 +148,12 @@ public class ModuleRegistry {
         );
 
         if (!isValid) {
-            logger.error("═══════════════════════════════════════════════════════════");
+            logger.error("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
             logger.error("✗ KRITISCHE MODULE FEHLEN!");
             logger.error("Fehlende Module: " + missingModules);
             logger.error("Das System kann ohne diese Module nicht betrieben werden.");
             logger.error("Fahre Server herunter...");
-            logger.error("═══════════════════════════════════════════════════════════");
+            logger.error("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
 
             // HARD-FAIL: Plugin deaktivieren und Server herunterfahren
             Bukkit.getScheduler().scheduleSyncDelayedTask(parentPlugin, () -> {
@@ -173,9 +210,9 @@ public class ModuleRegistry {
      */
     public String getSummary() {
         StringBuilder sb = new StringBuilder();
-        sb.append("═══════════════════════════════════════════════════════════\n");
+        sb.append("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════\n");
         sb.append("ModuleRegistry Summary (Total: ").append(modules.size()).append(")\n");
-        sb.append("═══════════════════════════════════════════════════════════\n");
+        sb.append("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════\n");
 
         modules.values().stream()
                 .sorted(Comparator.comparingInt(RegisteredModule::getPriority).reversed())
@@ -186,7 +223,7 @@ public class ModuleRegistry {
                             module.getPlugin().getName()));
                 });
 
-        sb.append("═══════════════════════════════════════════════════════════");
+        sb.append("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
         return sb.toString();
     }
 
@@ -197,6 +234,14 @@ public class ModuleRegistry {
         logger.info("Fahre ModuleRegistry herunter...");
         logger.info("Registrierte Module: " + modules.size());
         modules.clear();
+        loadedModules.clear();
         logger.info("✓ ModuleRegistry heruntergefahren.");
+    }
+
+    /**
+     * Gibt eine Kopie aller geladenen Module zurück (für Debugging).
+     */
+    public Map<String, Boolean> getLoadedModules() {
+        return new ConcurrentHashMap<>(loadedModules);
     }
 }
