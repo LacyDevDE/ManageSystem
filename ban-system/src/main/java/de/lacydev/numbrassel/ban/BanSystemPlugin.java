@@ -2,7 +2,7 @@ package de.lacydev.numbrassel.ban;
 
 import de.lacydev.numbrassel.core.NumbrasselCore;
 import de.lacydev.numbrassel.core.registry.ModuleRegistry;
-import de.lacydev.numbrassel.core.registry.RegistryVerificationResult;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +12,8 @@ import org.slf4j.LoggerFactory;
  * 
  * Kritische Registry-Verifizierung:
  * - Dieses Modul ist als ERFORDERLICH definiert
- * - Falls die ModuleRegistry-Prüfung fehlschlägt, wird das Plugin sofort deaktiviert
+ * - Prüfung: PermissionSystem MUSS vor dem Ban-System geladen sein
+ * - Falls die ModuleRegistry-Prüfung fehlschlägt: CRITICAL Fehler + sofortiges Shutdown
  * - Hard-Fail-Policy: Keine Ausnahmen möglich
  */
 public class BanSystemPlugin extends JavaPlugin {
@@ -25,9 +26,9 @@ public class BanSystemPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        logger.info("═══════════════════════════════════════════════════════════");
+        logger.info("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
         logger.info("Ban System v" + getDescription().getVersion() + " wird initialisiert...");
-        logger.info("═══════════════════════════════════════════════════════════");
+        logger.info("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
 
         try {
             // Schritt 1: Core-Plugin laden
@@ -44,30 +45,47 @@ public class BanSystemPlugin extends JavaPlugin {
             }
             logger.info("✓ ModuleRegistry abgerufen.");
 
-            // Schritt 3: Dieses Modul in der Registry registrieren
+            // Schritt 3: KRITISCHE ABHÄNGIGKEITS-PRÜFUNG - PermissionSystem MUSS geladen sein
+            logger.info("Prüfe erforderliche Module...");
+            if (!moduleRegistry.isModuleLoaded("PermissionSystem")) {
+                logger.error("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
+                logger.error("✗ CRITICAL: PermissionSystem missing. Shutting down...");
+                logger.error("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
+                
+                // HARD-FAIL: Server herunterfahren
+                Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> {
+                    logger.error("Fahre Server herunter...");
+                    Bukkit.shutdown();
+                }, 5L);
+                
+                return;
+            }
+            logger.info("✓ PermissionSystem ist verfügbar.");
+
+            // Schritt 4: Dieses Modul in der Registry registrieren
             boolean registered = moduleRegistry.registerModule("BanSystem", this, 50);
             if (!registered) {
                 throw new RuntimeException("Registrierung in ModuleRegistry fehlgeschlagen!");
             }
             logger.info("✓ Ban System in ModuleRegistry registriert.");
 
-            // Schritt 4: Konfiguration laden
+            // Schritt 5: Konfiguration laden
             saveDefaultConfig();
             logger.info("✓ Konfiguration geladen.");
 
-            // Schritt 5: Ban Manager initialisieren
+            // Schritt 6: Ban Manager initialisieren
             this.banManager = new BanManager(this, moduleRegistry);
             logger.info("✓ Ban Manager initialisiert.");
 
-            logger.info("═══════════════════════════════════════════════════════════");
+            logger.info("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
             logger.info("✓ Ban System erfolgreich aktiviert!");
-            logger.info("═══════════════════════════════════════════════════════════");
+            logger.info("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
-            logger.error("═══════════════════════════════════════════════════════════", e);
+            logger.error("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
             logger.error("✗ KRITISCHER FEHLER beim Starten des Ban Systems!");
             logger.error("Fehler: " + e.getMessage());
-            logger.error("═══════════════════════════════════════════════════════════");
+            logger.error("═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════");
             logger.error("Fahre Plugin herunter...");
 
             // HARD-FAIL: Plugin sofort deaktivieren
