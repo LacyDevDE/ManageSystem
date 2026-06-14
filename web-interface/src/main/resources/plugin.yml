@@ -1,0 +1,19 @@
+name: WebInterface
+version: 1.0.0
+main: de.lacydev.numbrassel.web.WebInterfacePlugin
+description: Web Admin-Interface für Numbrassel
+authors: [LacyDev]
+load: POSTWORLD
+depend: [NumbrasselCore]
+soft-depend: [PermissionSystem, BanSystem]
+
+commands:
+  webstatus:
+    description: Zeige Web-Interface Status
+    usage: /webstatus
+    permission: numbrassel.web.status
+
+permissions:
+  numbrassel.web.status:
+    description: Zeige Web-Interface Status
+    default: op

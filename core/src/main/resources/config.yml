@@ -1,0 +1,38 @@
+# Numbrassel Core Konfiguration
+
+# Logging
+logging:
+  level: INFO
+  file: logs/numbrassel.log
+
+# Module Registry
+module-registry:
+  require-all-modules: false
+  required-modules:
+    - BanSystem
+    - PermissionSystem
+
+# Database (wird von Modulen verwendet)
+database:
+  # MariaDB
+  mariadb:
+    enabled: false
+    host: localhost
+    port: 3306
+    database: numbrassel
+    username: root
+    password: password
+  
+  # MongoDB
+  mongodb:
+    enabled: false
+    host: localhost
+    port: 27017
+    database: numbrassel
+    username: ""
+    password: ""
+
+# System
+system:
+  timezone: Europe/Berlin
+  max-player-priority: 30

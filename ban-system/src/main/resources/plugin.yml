@@ -1,0 +1,26 @@
+name: BanSystem
+version: 1.0.0
+main: de.lacydev.numbrassel.ban.BanSystemPlugin
+description: Ban-Management für Numbrassel Server
+authors: [LacyDev]
+load: POSTWORLD
+depend: [NumbrasselCore]
+soft-depend: [PermissionSystem]
+
+commands:
+  ban:
+    description: Banniere einen Spieler
+    usage: /ban <player> [reason]
+    permission: numbrassel.ban.use
+  unban:
+    description: Entferne ein Ban
+    usage: /unban <player>
+    permission: numbrassel.ban.remove
+
+permissions:
+  numbrassel.ban.use:
+    description: Erlaubt das Bannieren von Spielern
+    default: op
+  numbrassel.ban.remove:
+    description: Erlaubt das Entfernen von Bans
+    default: op
