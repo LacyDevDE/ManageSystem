@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Implementierung des IPriorityManager Interface.
@@ -23,6 +25,7 @@ public class PriorityManager implements IPriorityManager {
     private final JavaPlugin plugin;
     private final ModuleRegistry moduleRegistry;
     private final Map<String, Integer> playerPriorities = new HashMap<>();
+    private final Map<UUID, Integer> uuidPriorityCache = new HashMap<>();
 
     // Prioritäts-Stufen
     private static final int PRIORITY_PLAYER = 0;
@@ -35,11 +38,35 @@ public class PriorityManager implements IPriorityManager {
         this.plugin = plugin;
         this.moduleRegistry = moduleRegistry;
         logger.info("PriorityManager initialisiert mit Priority-Levels:");
-        logger.info("  [" + PRIORITY_PLAYER + "] Player");
+        logger.info("  [" + PRIORITY_PLAYER + "] Player (Standard)");
         logger.info("  [" + PRIORITY_MODERATOR + "] Moderator");
         logger.info("  [" + PRIORITY_ADMIN + "] Admin");
         logger.info("  [" + PRIORITY_OWNER + "] Owner");
         logger.info("  [" + PRIORITY_CONSOLE + "] Console (System)");
+    }
+
+    @Override
+    public Optional<Integer> getPriority(UUID uuid) {
+        if (uuid == null) {
+            return Optional.empty();
+        }
+
+        // Prüfe UUID-Cache
+        if (uuidPriorityCache.containsKey(uuid)) {
+            return Optional.of(uuidPriorityCache.get(uuid));
+        }
+
+        // Versuche, den Spieler zu finden
+        Player player = Bukkit.getPlayer(uuid);
+        if (player != null && player.isOnline()) {
+            int priority = getPriority(player);
+            uuidPriorityCache.put(uuid, priority);
+            return Optional.of(priority);
+        }
+
+        // Fallback: Standard-Priorität zurückgeben
+        logger.debug("Spieler mit UUID " + uuid + " nicht gefunden. Verwende Standard-Priorität.");
+        return Optional.of(PRIORITY_PLAYER);
     }
 
     @Override
@@ -48,9 +75,11 @@ public class PriorityManager implements IPriorityManager {
             return PRIORITY_PLAYER;
         }
 
-        // Prüfe Cache
-        if (playerPriorities.containsKey(player.getUniqueId().toString())) {
-            return playerPriorities.get(player.getUniqueId().toString());
+        String uuidString = player.getUniqueId().toString();
+
+        // Prüfe String-Cache
+        if (playerPriorities.containsKey(uuidString)) {
+            return playerPriorities.get(uuidString);
         }
 
         // Berechne Priorität basierend auf Permissions
@@ -64,7 +93,8 @@ public class PriorityManager implements IPriorityManager {
             priority = PRIORITY_MODERATOR;
         }
 
-        playerPriorities.put(player.getUniqueId().toString(), priority);
+        playerPriorities.put(uuidString, priority);
+        uuidPriorityCache.put(player.getUniqueId(), priority);
         return priority;
     }
 
@@ -79,8 +109,10 @@ public class PriorityManager implements IPriorityManager {
             return false;
         }
 
-        playerPriorities.put(player.getUniqueId().toString(), priority);
-        logger.info("Priorität für " + player.getName() + " gesetzt auf: " + priority);
+        String uuidString = player.getUniqueId().toString();
+        playerPriorities.put(uuidString, priority);
+        uuidPriorityCache.put(player.getUniqueId(), priority);
+        logger.info("Priorität für " + player.getName() + " (UUID: " + player.getUniqueId() + ") gesetzt auf: " + priority + " (" + getPriorityName(priority) + ")");
         return true;
     }
 
@@ -107,18 +139,20 @@ public class PriorityManager implements IPriorityManager {
 
         int targetPrio = getPriority(target);
 
-        // HARD-RULE: Prüfung
+        // HARD-RULE: Prüfung - sender.getPrio() > target.getPrio()
         boolean canExecute = senderPrio > targetPrio;
 
         if (canExecute) {
             logger.debug(String.format(
-                    "✓ Action erlaubt: %s (Prio: %d) kann Action auf %s (Prio: %d) ausführen",
-                    senderName, senderPrio, target.getName(), targetPrio
+                    "✓ Action erlaubt: %s (Prio: %d - %s) kann Action auf %s (Prio: %d - %s) ausführen",
+                    senderName, senderPrio, getPriorityName(senderPrio),
+                    target.getName(), targetPrio, getPriorityName(targetPrio)
             ));
         } else {
             logger.warn(String.format(
-                    "✗ Action BLOCKIERT: %s (Prio: %d) DARF NICHT auf %s (Prio: %d) zugreifen",
-                    senderName, senderPrio, target.getName(), targetPrio
+                    "✗ Action BLOCKIERT: %s (Prio: %d - %s) DARF NICHT auf %s (Prio: %d - %s) zugreifen",
+                    senderName, senderPrio, getPriorityName(senderPrio),
+                    target.getName(), targetPrio, getPriorityName(targetPrio)
             ));
         }
 
@@ -148,6 +182,11 @@ public class PriorityManager implements IPriorityManager {
         return PRIORITY_CONSOLE;
     }
 
+    @Override
+    public int getDefaultPriority() {
+        return PRIORITY_PLAYER;
+    }
+
     /**
      * Gibt die Prioritäts-Stufen-Konstanten zurück.
      */
@@ -172,10 +211,23 @@ public class PriorityManager implements IPriorityManager {
     }
 
     /**
+     * Invalidiert den Cache für einen Spieler (z.B. nach Permission-Änderung).
+     */
+    public void invalidateCache(UUID uuid) {
+        uuidPriorityCache.remove(uuid);
+        Player player = Bukkit.getPlayer(uuid);
+        if (player != null) {
+            playerPriorities.remove(player.getUniqueId().toString());
+        }
+        logger.debug("Cache für UUID " + uuid + " invalidiert.");
+    }
+
+    /**
      * Speichert den Priority Manager herunter.
      */
     public void shutdown() {
         playerPriorities.clear();
+        uuidPriorityCache.clear();
         logger.info("PriorityManager heruntergefahren.");
     }
 }
